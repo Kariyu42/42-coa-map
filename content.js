@@ -5,17 +5,24 @@
  * 2. Fetch active locations (host → login) + coalition data via background worker
  * 3. Watch for SVGs injected into .map-container divs
  * 4. For each occupied seat, directly style its stroke/fill with the coalition color
+ * 5. Hover card: show user profile on seat hover (replaces intra's default tooltip)
+ * 6. Filter panel: toggle coalition visibility
  */
 
 const CLUSTER_MAP_EL = document.getElementById('cluster-map');
 const CAMPUS_ID = CLUSTER_MAP_EL?.dataset.campusId;
 
-// host  → { login, coalition: { name, color, image_url } | null }
-const hostData   = new Map();
+// host  → { login, coalition: { name, color, image_url, slug } | null }
+const hostData = new Map();
 // login → coalition  (used by the link-based fallback)
 const loginCoalition = new Map();
 
 const BADGE_ATTR = 'data-coa-applied';
+const SLUG_ATTR  = 'data-coa-slug';
+const LOGIN_ATTR = 'data-coa-login';
+
+// Hidden coalition slugs (filter panel state)
+const hiddenSlugs = new Set();
 
 // ── Messaging ─────────────────────────────────────────────────────────────────
 
@@ -35,6 +42,9 @@ async function loadData() {
     console.warn('[42 CoaMap] No campus ID found on #cluster-map');
     return;
   }
+
+  // Persist campus ID so the leaderboard script can use it on project pages
+  chrome.storage.local.set({ last_campus_id: CAMPUS_ID });
 
   let locRes;
   try {
@@ -65,6 +75,7 @@ async function loadData() {
   }
 
   document.querySelectorAll('.map-container').forEach(applyToContainer);
+  buildFilterPanel();
 }
 
 // ── Style a seat element ──────────────────────────────────────────────────────
@@ -79,26 +90,34 @@ function hexToRgb(hex) {
   };
 }
 
-function styleSeat(seatEl, coalition) {
+function styleSeat(seatEl, coalition, login) {
   if (seatEl.hasAttribute(BADGE_ATTR)) return;
   seatEl.setAttribute(BADGE_ATTR, '1');
 
-  if (!coalition?.color) return;
+  // Suppress intra's default Bootstrap tooltip on this seat
+  seatEl.removeAttribute('title');
+  seatEl.removeAttribute('data-original-title');
+  seatEl.removeAttribute('data-toggle');
+
+  if (coalition?.slug) seatEl.setAttribute(SLUG_ATTR, coalition.slug);
+  if (login) seatEl.setAttribute(LOGIN_ATTR, login);
+
+  if (!coalition?.color) {
+    if (login) addHoverListeners(seatEl, login, null);
+    return;
+  }
 
   const bg = seatEl.querySelector('rect, polygon, path') || seatEl;
-
   bg.style.stroke      = coalition.color;
   bg.style.strokeWidth = '3';
 
   const rgb = hexToRgb(coalition.color);
   if (rgb) bg.style.fill = `rgba(${rgb.r},${rgb.g},${rgb.b},0.35)`;
 
-  let title = seatEl.querySelector('title');
-  if (!title) {
-    title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
-    seatEl.prepend(title);
-  }
-  title.textContent = coalition.name;
+  // Apply current filter state
+  if (hiddenSlugs.has(coalition.slug)) seatEl.setAttribute('data-coa-hidden', '1');
+
+  addHoverListeners(seatEl, login, coalition);
 }
 
 // ── Apply to a single .map-container ─────────────────────────────────────────
@@ -108,9 +127,9 @@ function applyToContainer(container) {
   if (!svg) return;
 
   // Strategy 1: SVG element id == API host (e.g. "e1r1s1")
-  for (const [host, { coalition }] of hostData) {
+  for (const [host, { login, coalition }] of hostData) {
     const seat = svg.getElementById(host);
-    if (seat) styleSeat(seat, coalition);
+    if (seat) styleSeat(seat, coalition, login);
   }
 
   // Strategy 2: intra JS adds <a href=".../users/LOGIN"> to occupied seats
@@ -119,8 +138,165 @@ function applyToContainer(container) {
     if (!match) return;
     const login = match[1];
     const coalition = loginCoalition.get(login) ?? null;
-    styleSeat(a, coalition);
+    styleSeat(a, coalition, login);
   });
+}
+
+// ── Hover card ────────────────────────────────────────────────────────────────
+
+const card = document.createElement('div');
+card.id = 'coa-card';
+card.innerHTML = `
+  <div class="coa-card-top">
+    <img class="coa-card-avatar" src="" alt="" />
+    <div class="coa-card-meta">
+      <div class="coa-card-login"></div>
+      <div class="coa-card-displayname"></div>
+    </div>
+    <div class="coa-card-badge"></div>
+  </div>
+  <div class="coa-card-level-row">
+    <div class="coa-card-level-bar"><div class="coa-card-level-fill"></div></div>
+    <span class="coa-card-level-text"></span>
+  </div>
+`;
+document.body.appendChild(card);
+
+let hoverTimer = null;
+let activeLogin = null;
+
+function showCard(seatEl, login, coalition) {
+  activeLogin = login;
+  card.dataset.state = 'loading';
+  positionCard(seatEl);
+
+  sendMsg({ type: 'GET_USER_PROFILE', login })
+    .then((res) => {
+      if (activeLogin !== login) return;
+      if (!res?.ok) { hideCard(); return; }
+      populateCard(res.data, coalition);
+      card.dataset.state = 'visible';
+    })
+    .catch(hideCard);
+}
+
+function positionCard(seatEl) {
+  const rect = seatEl.getBoundingClientRect();
+  const cx = rect.left + rect.width / 2;
+  const cy = rect.top;
+  card.style.left = `${cx}px`;
+  card.style.top  = `${cy - 8}px`;
+}
+
+function populateCard(profile, coalition) {
+  const avatarEl = card.querySelector('.coa-card-avatar');
+  if (profile.avatar) {
+    avatarEl.src = profile.avatar;
+    avatarEl.style.display = '';
+  } else {
+    avatarEl.style.display = 'none';
+  }
+
+  card.querySelector('.coa-card-login').textContent = profile.login;
+  card.querySelector('.coa-card-displayname').textContent = profile.displayname || '';
+
+  const badge = card.querySelector('.coa-card-badge');
+  if (coalition?.color) {
+    badge.textContent = coalition.name;
+    badge.style.background = coalition.color;
+    badge.style.display = '';
+  } else {
+    badge.style.display = 'none';
+  }
+
+  const levelRow = card.querySelector('.coa-card-level-row');
+  if (profile.level !== null) {
+    const fraction = profile.level % 1;
+    const fill = card.querySelector('.coa-card-level-fill');
+    fill.style.width = `${fraction * 100}%`;
+    fill.style.background = coalition?.color || '#6688cc';
+    card.querySelector('.coa-card-level-text').textContent = `Level ${Math.floor(profile.level)}`;
+    levelRow.style.display = '';
+  } else {
+    levelRow.style.display = 'none';
+  }
+}
+
+function hideCard() {
+  activeLogin = null;
+  card.dataset.state = '';
+}
+
+function addHoverListeners(seatEl, login, coalition) {
+  if (!login) return;
+  seatEl.addEventListener('mouseenter', () => {
+    clearTimeout(hoverTimer);
+    hoverTimer = setTimeout(() => showCard(seatEl, login, coalition), 250);
+  });
+  seatEl.addEventListener('mouseleave', () => {
+    clearTimeout(hoverTimer);
+    hideCard();
+  });
+}
+
+// ── Filter panel ──────────────────────────────────────────────────────────────
+
+function buildFilterPanel() {
+  if (document.getElementById('coa-filter')) return; // already built
+
+  // Collect unique coalitions present on this cluster
+  const seen = new Map();
+  for (const coalition of loginCoalition.values()) {
+    if (coalition?.slug && !seen.has(coalition.slug)) seen.set(coalition.slug, coalition);
+  }
+  if (!seen.size) return;
+
+  const panel = document.createElement('div');
+  panel.id = 'coa-filter';
+  panel.innerHTML = `
+    <div class="coa-filter-header">
+      <span>Coalitions</span>
+      <button class="coa-filter-collapse" title="Collapse">−</button>
+    </div>
+    <div class="coa-filter-body"></div>
+  `;
+
+  const body = panel.querySelector('.coa-filter-body');
+  for (const [slug, coa] of seen) {
+    const row = document.createElement('label');
+    row.className = 'coa-filter-row';
+    row.innerHTML = `
+      <input type="checkbox" checked data-slug="${slug}" />
+      <span class="coa-filter-dot" style="background:${coa.color}"></span>
+      <span class="coa-filter-name">${coa.name}</span>
+    `;
+    row.querySelector('input').addEventListener('change', (e) => {
+      toggleCoalition(slug, e.target.checked);
+    });
+    body.appendChild(row);
+  }
+
+  panel.querySelector('.coa-filter-collapse').addEventListener('click', (e) => {
+    const collapsed = body.style.display === 'none';
+    body.style.display = collapsed ? '' : 'none';
+    e.target.textContent = collapsed ? '−' : '+';
+  });
+
+  document.body.appendChild(panel);
+}
+
+function toggleCoalition(slug, visible) {
+  if (visible) {
+    hiddenSlugs.delete(slug);
+    document.querySelectorAll(`[${SLUG_ATTR}="${slug}"]`).forEach((el) =>
+      el.removeAttribute('data-coa-hidden')
+    );
+  } else {
+    hiddenSlugs.add(slug);
+    document.querySelectorAll(`[${SLUG_ATTR}="${slug}"]`).forEach((el) =>
+      el.setAttribute('data-coa-hidden', '1')
+    );
+  }
 }
 
 // ── Observe DOM changes ───────────────────────────────────────────────────────

@@ -7,8 +7,11 @@ const API_BASE = 'https://api.intra.42.fr';
 const TOKEN_KEY = 'oauth_token';
 const COALITION_CACHE_KEY = 'coalition_cache';
 const LOCATION_CACHE_KEY  = 'location_cache';
+const PROFILE_CACHE_KEY   = 'profile_cache';
 const COALITION_TTL_MS = 30 * 60 * 1000; //  30 min — coalitions rarely change
 const LOCATION_TTL_MS  =  5 * 60 * 1000; //   5 min — locations change often
+const PROFILE_TTL_MS   = 30 * 60 * 1000; //  30 min — profiles rarely change
+const LB_TTL_MS        = 10 * 60 * 1000; //  10 min — leaderboard
 
 // ── Rate limiter ──────────────────────────────────────────────────────────────
 // The 42 API allows 2 req/s. We stay safe at 1 req/550ms.
@@ -189,6 +192,64 @@ async function getCoalitionsForLogins(logins) {
   return result;
 }
 
+// ── User profiles ─────────────────────────────────────────────────────────────
+
+async function getUserProfile(login) {
+  const cache = (await readCache(PROFILE_CACHE_KEY)) || {};
+  if (cache[login]) return cache[login];
+
+  const user = await apiFetch(`/users/${login}`);
+  const cursus42 = user.cursus_users?.find((cu) => cu.cursus_id === 21)
+    || user.cursus_users?.find((cu) => !/(piscine)/i.test(cu.cursus?.name || ''))
+    || user.cursus_users?.[0];
+
+  const profile = {
+    login: user.login,
+    displayname: user.displayname,
+    avatar: user.image?.versions?.small || user.image?.link || null,
+    level: cursus42?.level ?? null,
+    grade: cursus42?.grade ?? null,
+  };
+
+  cache[login] = profile;
+  await writeCache(PROFILE_CACHE_KEY, cache, PROFILE_TTL_MS);
+  return profile;
+}
+
+// ── Project leaderboard ───────────────────────────────────────────────────────
+
+async function getProjectLeaderboard(projectSlug, campusId) {
+  const cacheKey = `lb_${projectSlug}_${campusId}`;
+  const cached = await readCache(cacheKey);
+  if (cached) return cached;
+
+  // Resolve slug → project ID
+  const projects = await apiFetch('/projects', { 'filter[slug]': projectSlug, 'page[size]': 1 });
+  if (!projects.length) throw new Error(`Project not found: ${projectSlug}`);
+  const projectId = projects[0].id;
+
+  const raw = await apiFetch('/projects_users', {
+    'filter[project_id]': projectId,
+    'filter[campus_id]': campusId,
+    'filter[status]': 'finished',
+    'sort': '-final_mark',
+    'page[size]': 20,
+  });
+
+  const leaderboard = raw
+    .filter((pu) => pu.final_mark !== null)
+    .map((pu) => ({
+      login: pu.user?.login,
+      displayname: pu.user?.displayname,
+      avatar: pu.user?.image?.versions?.small || pu.user?.image?.link || null,
+      finalMark: pu.final_mark,
+      validated: pu['validated?'],
+    }));
+
+  await writeCache(cacheKey, leaderboard, LB_TTL_MS);
+  return leaderboard;
+}
+
 // ── Message handler ───────────────────────────────────────────────────────────
 
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
@@ -209,6 +270,20 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (msg.type === 'TEST_CREDENTIALS') {
     getAccessToken()
       .then(() => sendResponse({ ok: true }))
+      .catch((err) => sendResponse({ ok: false, error: err.message }));
+    return true;
+  }
+
+  if (msg.type === 'GET_USER_PROFILE') {
+    getUserProfile(msg.login)
+      .then((data) => sendResponse({ ok: true, data }))
+      .catch((err) => sendResponse({ ok: false, error: err.message }));
+    return true;
+  }
+
+  if (msg.type === 'GET_PROJECT_LEADERBOARD') {
+    getProjectLeaderboard(msg.projectSlug, msg.campusId)
+      .then((data) => sendResponse({ ok: true, data }))
       .catch((err) => sendResponse({ ok: false, error: err.message }));
     return true;
   }

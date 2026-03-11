@@ -1,2 +1,191 @@
-/* SVG overlays are drawn programmatically — no extra CSS needed for badges.
-   This file is kept as a placeholder in case campus-specific tweaks are needed. */
+/* ── Coalition filter: hidden seats ──────────────────────────────────────── */
+
+[data-coa-hidden] {
+  opacity: 0.1 !important;
+  transition: opacity 0.2s;
+}
+
+/* ── Hover card ──────────────────────────────────────────────────────────── */
+
+#coa-card {
+  position: fixed;
+  z-index: 99999;
+  background: #16213e;
+  border: 1px solid #2d2d4e;
+  border-radius: 10px;
+  padding: 12px;
+  width: 220px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.55);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 12px;
+  color: #e0e0e0;
+  pointer-events: none;
+  opacity: 0;
+  transform: translate(-50%, -100%);
+  transition: opacity 0.12s ease;
+}
+
+#coa-card[data-state="loading"],
+#coa-card[data-state="visible"] {
+  opacity: 1;
+}
+
+.coa-card-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.coa-card-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: #0f3460;
+  flex-shrink: 0;
+}
+
+.coa-card-meta {
+  flex: 1;
+  min-width: 0;
+}
+
+.coa-card-login {
+  font-weight: 700;
+  color: #fff;
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.coa-card-displayname {
+  font-size: 11px;
+  color: #888;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.coa-card-badge {
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #fff;
+  flex-shrink: 0;
+  max-width: 80px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.coa-card-level-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.coa-card-level-bar {
+  flex: 1;
+  height: 5px;
+  background: #2d2d4e;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.coa-card-level-fill {
+  height: 100%;
+  border-radius: 3px;
+  background: #6688cc;
+  transition: width 0.3s ease;
+}
+
+.coa-card-level-text {
+  font-size: 11px;
+  color: #aaa;
+  white-space: nowrap;
+}
+
+/* ── Filter panel ────────────────────────────────────────────────────────── */
+
+#coa-filter {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 99998;
+  background: #16213e;
+  border: 1px solid #2d2d4e;
+  border-radius: 10px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 12px;
+  color: #e0e0e0;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  min-width: 155px;
+}
+
+.coa-filter-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-bottom: 1px solid #2d2d4e;
+  font-weight: 600;
+  font-size: 11px;
+  color: #9999cc;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+
+.coa-filter-collapse {
+  background: none;
+  border: none;
+  color: #9999cc;
+  font-size: 15px;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0 2px;
+}
+
+.coa-filter-collapse:hover {
+  color: #ccc;
+}
+
+.coa-filter-body {
+  padding: 6px 0;
+}
+
+.coa-filter-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 12px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.coa-filter-row:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.coa-filter-row input[type="checkbox"] {
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
+  cursor: pointer;
+  accent-color: #6688cc;
+}
+
+.coa-filter-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.coa-filter-name {
+  color: #ccc;
+  font-size: 12px;
+  white-space: nowrap;
+}

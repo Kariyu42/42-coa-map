@@ -1,0 +1,116 @@
+/* ── Leaderboard panel ───────────────────────────────────────────────────── */
+
+#coa-lb-panel {
+  position: fixed;
+  top: 80px;
+  right: 20px;
+  z-index: 9999;
+  background: #16213e;
+  border: 1px solid #2d2d4e;
+  border-radius: 10px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 12px;
+  color: #e0e0e0;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  min-width: 240px;
+  max-height: 65vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.coa-lb-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-bottom: 1px solid #2d2d4e;
+  font-weight: 600;
+  font-size: 11px;
+  color: #9999cc;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  flex-shrink: 0;
+}
+
+.coa-lb-header span {
+  flex: 1;
+}
+
+.coa-lb-refresh,
+.coa-lb-collapse {
+  background: none;
+  border: none;
+  color: #9999cc;
+  font-size: 14px;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0 2px;
+}
+
+.coa-lb-refresh:hover,
+.coa-lb-collapse:hover {
+  color: #ccc;
+}
+
+.coa-lb-body {
+  overflow-y: auto;
+  padding: 4px 0;
+}
+
+.coa-lb-status {
+  padding: 12px;
+  font-size: 11px;
+  color: #666;
+  text-align: center;
+}
+
+.coa-lb-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 12px;
+}
+
+.coa-lb-row:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.coa-lb-rank {
+  width: 18px;
+  font-size: 10px;
+  color: #555;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.coa-lb-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: #0f3460;
+  flex-shrink: 0;
+  display: block;
+}
+
+.coa-lb-login {
+  flex: 1;
+  color: #ccc;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.coa-lb-mark {
+  font-weight: 700;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.coa-lb-mark.pass {
+  color: #5dca80;
+}
+
+.coa-lb-mark.fail {
+  color: #e06060;
+}

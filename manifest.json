@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "42 Coalition Map",
   "description": "Displays coalition colors for each user on the 42 intra cluster map",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "permissions": [
     "storage",
     "tabs"
@@ -21,11 +21,19 @@
   "content_scripts": [
     {
       "matches": [
-        "https://*.intra.42.fr/clusters*",
-        "https://profile.intra.42.fr/clusters*"
+        "https://*.intra.42.fr/clusters*"
       ],
       "js": ["content.js"],
       "css": ["content.css"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://projects.intra.42.fr/projects/*",
+        "https://profile.intra.42.fr/projects/*"
+      ],
+      "js": ["leaderboard.js"],
+      "css": ["leaderboard.css"],
       "run_at": "document_idle"
     }
   ],
