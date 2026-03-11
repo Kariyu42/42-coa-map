@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>42 Coalition Map — Settings</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <header>
+    <h1>42 Coalition Map</h1>
+    <p class="subtitle">Overlay coalition colors on the cluster map</p>
+    <button id="open-tab-btn" class="btn-tab" title="Open in a full tab so it won't close">↗ Open in tab</button>
+  </header>
+
+  <main>
+    <section class="card">
+      <h2>API Credentials</h2>
+      <p class="hint">
+        Create an app at
+        <a href="https://profile.intra.42.fr/oauth/applications" target="_blank">
+          profile.intra.42.fr/oauth/applications
+        </a>
+        and paste your credentials below.
+      </p>
+
+      <label for="client-id">Client UID</label>
+      <input type="text" id="client-id" placeholder="u-s4t2ud-…" autocomplete="off" />
+
+      <label for="client-secret">Client Secret</label>
+      <input type="password" id="client-secret" placeholder="s-s4t2ud-…" autocomplete="off" />
+
+      <div class="actions">
+        <button id="save-btn" class="btn-primary">Save & Test</button>
+        <button id="clear-cache-btn" class="btn-secondary">Clear Cache</button>
+      </div>
+
+      <div id="status" class="status hidden"></div>
+    </section>
+
+    <section class="card info-card">
+      <h2>How it works</h2>
+      <ul>
+        <li>Open any <strong>cluster map</strong> page on intra.42.fr</li>
+        <li>Coalition colors appear as colored borders & badges on each user slot</li>
+        <li>Coalition data is cached for <strong>30 minutes</strong></li>
+      </ul>
+    </section>
+  </main>
+
+  <script src="popup.js"></script>
+</body>
+</html>
