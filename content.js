@@ -229,11 +229,35 @@ function hideCard() {
 
 function addHoverListeners(seatEl, login, coalition) {
   if (!login) return;
-  seatEl.addEventListener('mouseenter', () => {
+
+  // The intra uses <image data-tooltip-login="..." data-tooltip-url="..."> for avatars.
+  // Find it inside the seat or its parent group.
+  const group = seatEl.closest('g') || seatEl;
+  const avatarImg = group.querySelector(`image[data-tooltip-login="${login}"]`)
+                 || group.querySelector('image[data-tooltip-login]')
+                 || group.querySelector('image');
+
+  // Suppress intra's default tooltip on the avatar image
+  if (avatarImg) {
+    avatarImg.removeAttribute('data-tooltip-url');
+    avatarImg.removeAttribute('data-tooltip-login');
+    avatarImg.removeAttribute('title');
+    avatarImg.removeAttribute('data-original-title');
+    avatarImg.removeAttribute('data-toggle');
+  }
+
+  // Also suppress on the seat element itself
+  seatEl.removeAttribute('title');
+  seatEl.removeAttribute('data-original-title');
+  seatEl.removeAttribute('data-toggle');
+
+  // Attach hover to the avatar image (primary) and seat rect (fallback)
+  const target = avatarImg || seatEl;
+  target.addEventListener('mouseenter', () => {
     clearTimeout(hoverTimer);
-    hoverTimer = setTimeout(() => showCard(seatEl, login, coalition), 250);
+    hoverTimer = setTimeout(() => showCard(target, login, coalition), 250);
   });
-  seatEl.addEventListener('mouseleave', () => {
+  target.addEventListener('mouseleave', () => {
     clearTimeout(hoverTimer);
     hideCard();
   });
