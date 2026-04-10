@@ -16,26 +16,38 @@
   <main>
     <section class="card">
       <h2>API Credentials</h2>
-      <p class="hint">
-        Create an app at
-        <a href="https://profile.intra.42.fr/oauth/applications" target="_blank">
-          profile.intra.42.fr/oauth/applications
-        </a>
-        and paste your credentials below.
+
+      <button id="auto-setup-btn" class="btn-primary btn-full">
+        Auto Setup
+      </button>
+      <p class="hint" style="margin-top:6px">
+        Uses your 42 intra session to create an OAuth app automatically.
+        Make sure you're <strong>logged in</strong> first.
       </p>
 
-      <label for="client-id">Client UID</label>
-      <input type="text" id="client-id" placeholder="u-s4t2ud-…" autocomplete="off" />
-
-      <label for="client-secret">Client Secret</label>
-      <input type="password" id="client-secret" placeholder="s-s4t2ud-…" autocomplete="off" />
-
-      <div class="actions">
-        <button id="save-btn" class="btn-primary">Save & Test</button>
-        <button id="clear-cache-btn" class="btn-secondary">Clear Cache</button>
-      </div>
-
       <div id="status" class="status hidden"></div>
+
+      <details id="manual-setup" class="manual-details">
+        <summary>Manual setup</summary>
+        <p class="hint" style="margin-top:8px">
+          Or create an app at
+          <a href="https://profile.intra.42.fr/oauth/applications" target="_blank">
+            profile.intra.42.fr/oauth/applications
+          </a>
+          and paste credentials below.
+        </p>
+
+        <label for="client-id">Client UID</label>
+        <input type="text" id="client-id" placeholder="u-s4t2ud-…" autocomplete="off" />
+
+        <label for="client-secret">Client Secret</label>
+        <input type="password" id="client-secret" placeholder="s-s4t2ud-…" autocomplete="off" />
+
+        <div class="actions">
+          <button id="save-btn" class="btn-primary">Save & Test</button>
+          <button id="clear-cache-btn" class="btn-secondary">Clear Cache</button>
+        </div>
+      </details>
     </section>
 
     <section class="card info-card">
